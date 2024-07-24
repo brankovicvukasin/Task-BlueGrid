@@ -26,7 +26,7 @@ export const scrapeData = async (): Promise<void> => {
     const data = response.data;
 
     global.CACHE = transformData(data.items);
-    console.log("Data scraped successfuly!");
+    console.log("Data scraped successfully!");
   } catch (error: any) {
     console.error("Error fetching data:", error.message);
   }
@@ -40,58 +40,63 @@ const transformData = (data: FileItem[]): any => {
     const pathParts = url.pathname.split("/").filter((part) => part);
 
     if (pathParts.length > 1) {
-      const [repo, ...rest] = pathParts;
-      const filename = rest.pop();
-      const repoPath = rest.join("/");
+      let currentLevel = (result[url.hostname] = result[url.hostname] || []);
 
-      if (!result[url.hostname]) {
-        result[url.hostname] = [];
-      }
-
-      let repoEntry = result[url.hostname].find(
-        (entry: any) => typeof entry === "object" && entry.hasOwnProperty(repo)
-      );
-      if (!repoEntry) {
-        repoEntry = { [repo]: [] };
-        result[url.hostname].push(repoEntry);
-      }
-
-      if (repoPath) {
-        let pathEntry = repoEntry[repo].find(
-          (entry: any) =>
-            typeof entry === "object" && entry.hasOwnProperty(repoPath)
-        );
-        if (!pathEntry) {
-          pathEntry = { [repoPath]: [] };
-          repoEntry[repo].push(pathEntry);
-        }
-
-        pathEntry[repoPath].push(filename);
-      } else {
-        if (
-          repoEntry[repo].length > 0 &&
-          typeof repoEntry[repo][0] === "string"
-        ) {
-          repoEntry[repo] = repoEntry[repo].filter(
-            (entry: any) => typeof entry !== "string"
+      pathParts.forEach((part, index) => {
+        if (index === pathParts.length - 1) {
+          if (Array.isArray(currentLevel)) {
+            currentLevel.push(part);
+          } else {
+            currentLevel[part] = part;
+          }
+        } else {
+          let nextLevel = currentLevel.find(
+            (entry: any) =>
+              typeof entry === "object" && entry.hasOwnProperty(part)
           );
+          if (!nextLevel) {
+            nextLevel = { [part]: [] };
+            currentLevel.push(nextLevel);
+          }
+          currentLevel = nextLevel[part];
         }
-        repoEntry[repo].push(filename);
-      }
+      });
     }
   });
 
-  Object.keys(result).forEach((hostname) => {
-    result[hostname].forEach((repoEntry: any) => {
-      Object.keys(repoEntry).forEach((repo) => {
-        if (repoEntry[repo].some((entry: any) => typeof entry === "object")) {
-          repoEntry[repo] = repoEntry[repo].filter(
-            (entry: any) => typeof entry === "object"
-          );
-        }
-      });
-    });
-  });
+  for (const host in result) {
+    result[host] = removeDuplicates(result[host]);
+  }
 
-  return result;
+  return {
+    data: result,
+  };
+};
+
+const removeDuplicates = (array: any[]): any[] => {
+  return array.map((item) => {
+    if (typeof item === "object" && !Array.isArray(item)) {
+      const key = Object.keys(item)[0];
+      const value = item[key];
+      if (Array.isArray(value)) {
+        item[key] = value
+          .filter(
+            (subItem) =>
+              !(
+                typeof subItem === "string" &&
+                value.some(
+                  (v) => typeof v === "object" && v.hasOwnProperty(subItem)
+                )
+              )
+          )
+          .map((subItem) => {
+            if (typeof subItem === "object") {
+              return removeDuplicates([subItem])[0];
+            }
+            return subItem;
+          });
+      }
+    }
+    return item;
+  });
 };
