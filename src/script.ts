@@ -1,4 +1,5 @@
 import axios from "axios";
+import { knownExtensions } from "./extensions";
 
 interface FileItem {
   fileUrl: string;
@@ -84,7 +85,8 @@ const transformData = (data: FileItem[]): any => {
 };
 
 const isFile = (part: string): boolean => {
-  return /\.\w{3}$/.test(part);
+  const extension = part.substring(part.lastIndexOf("."));
+  return knownExtensions.includes(extension.toLowerCase());
 };
 
 const removeDuplicates = (array: any[]): any[] => {
