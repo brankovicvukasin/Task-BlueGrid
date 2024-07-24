@@ -68,9 +68,7 @@ const transformData = (data: FileItem[]): any => {
     result[host] = removeDuplicates(result[host]);
   }
 
-  return {
-    data: result,
-  };
+  return result;
 };
 
 const removeDuplicates = (array: any[]): any[] => {
