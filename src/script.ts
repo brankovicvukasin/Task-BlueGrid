@@ -44,10 +44,22 @@ const transformData = (data: FileItem[]): any => {
 
       pathParts.forEach((part, index) => {
         if (index === pathParts.length - 1) {
-          if (Array.isArray(currentLevel)) {
-            currentLevel.push(part);
+          if (isFile(part)) {
+            if (Array.isArray(currentLevel)) {
+              currentLevel.push(part);
+            } else {
+              currentLevel[part] = part;
+            }
           } else {
-            currentLevel[part] = part;
+            let nextLevel = currentLevel.find(
+              (entry: any) =>
+                typeof entry === "object" && entry.hasOwnProperty(part)
+            );
+            if (!nextLevel) {
+              nextLevel = { [part]: [] };
+              currentLevel.push(nextLevel);
+            }
+            currentLevel = nextLevel[part];
           }
         } else {
           let nextLevel = currentLevel.find(
@@ -69,6 +81,10 @@ const transformData = (data: FileItem[]): any => {
   }
 
   return result;
+};
+
+const isFile = (part: string): boolean => {
+  return /\.\w{3}$/.test(part);
 };
 
 const removeDuplicates = (array: any[]): any[] => {
